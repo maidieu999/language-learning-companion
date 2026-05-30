@@ -1,7 +1,7 @@
-import type { Prisma } from '@prisma/client';
+import type { Document as PrismaDocument, Prisma } from '@prisma/client';
 
 /** Prisma model type (aliased to avoid clashing with the DOM `Document` global). */
-export type DocumentModel = Prisma.DocumentGetPayload<Record<string, never>>;
+export type DocumentModel = PrismaDocument;
 
 export type CreateDocumentData = Prisma.DocumentUncheckedCreateInput;
 
