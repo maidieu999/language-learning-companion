@@ -1,15 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ChunkingService } from '../../src/chunking/chunking.service';
+import { AiService } from 'src/ai/ai.service';
 
-describe('ChunkingService', () => {
-  let service: ChunkingService;
+describe('AiService', () => {
+  let service: AiService;
 
   beforeEach(async () => {
+    process.env.GEMINI_API_KEY ??= 'test-gemini-key';
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ChunkingService],
+      providers: [AiService],
     }).compile();
 
-    service = module.get<ChunkingService>(ChunkingService);
+    service = module.get<AiService>(AiService);
   });
 
   it('should be defined', () => {

@@ -33,4 +33,18 @@ model Chunk {
   document   Document @relation(fields: [documentId], references: [id])
 
   createdAt DateTime @default(now())
+
+  embeddings Embedding[]
+}
+
+model Embedding {
+  id        String @id @default(uuid())
+
+  chunkId   String @unique
+
+  vector    Unsupported("vector(1536)")
+
+  chunk     Chunk @relation(fields: [chunkId],references: [id])
+
+  createdAt DateTime @default(now())
 }

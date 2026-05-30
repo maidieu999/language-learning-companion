@@ -6,7 +6,7 @@ describe('PrismaService', () => {
 
   beforeEach(async () => {
     process.env.DATABASE_URL ??=
-      'postgresql://postgres:postgres@localhost:5432/llc';
+      'postgresql://postgres:postgres@localhost:5433/llc';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [PrismaService],
