@@ -32,4 +32,23 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  // Decorators (Swagger, class-validator) and Prisma delegates often look
+  // "unresolved" to the IDE type checker even when build and lint pass.
+  {
+    files: [
+      '**/*.controller.ts',
+      '**/*.dto.ts',
+      '**/*.repository.ts',
+      '**/prisma.types.ts',
+      'src/prisma/**/*.ts',
+      'src/swagger.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-redundant-type-constituents': 'off',
+    },
+  },
 );

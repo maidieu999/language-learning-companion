@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 describe('PrismaService', () => {
   let service: PrismaService;
@@ -17,5 +17,9 @@ describe('PrismaService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('should expose Prisma model delegates', () => {
+    expect(service.getClient().document).toBeDefined();
   });
 });
