@@ -13,6 +13,7 @@ describe('DocumentsController', () => {
           provide: DocumentsService,
           useValue: {
             createDocument: jest.fn(),
+            listDocuments: jest.fn(),
           },
         },
       ],

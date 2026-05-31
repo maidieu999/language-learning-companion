@@ -40,4 +40,8 @@ export class DocumentsService {
     );
     return document;
   }
+
+  listDocuments(): Promise<DocumentModel[]> {
+    return this.documentRepository.listDocuments();
+  }
 }

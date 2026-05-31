@@ -9,7 +9,10 @@ import { DocumentsService } from 'src/documents/documents.service';
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
-  let documentRepository: { createDocument: jest.Mock };
+  let documentRepository: {
+    createDocument: jest.Mock;
+    listDocuments: jest.Mock;
+  };
   let chunkingService: { chunkText: jest.Mock };
   let chunkingRepository: { createMany: jest.Mock };
   let aiService: { createEmbedding: jest.Mock };
@@ -54,6 +57,7 @@ describe('DocumentsService', () => {
   beforeEach(async () => {
     documentRepository = {
       createDocument: jest.fn().mockResolvedValue(document),
+      listDocuments: jest.fn().mockResolvedValue([document]),
     };
     chunkingService = {
       chunkText: jest.fn().mockReturnValue(textChunks),
@@ -88,6 +92,15 @@ describe('DocumentsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('listDocuments', () => {
+    it('returns documents from the repository', async () => {
+      const result = await service.listDocuments();
+
+      expect(result).toEqual([document]);
+      expect(documentRepository.listDocuments).toHaveBeenCalled();
+    });
   });
 
   describe('createDocument', () => {

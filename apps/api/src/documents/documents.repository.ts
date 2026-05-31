@@ -25,4 +25,10 @@ export class DocumentRepository extends BaseRepository {
   findDocuments(where: DocumentWhereInput): Promise<DocumentModel[]> {
     return this.getClient().document.findMany({ where });
   }
+
+  listDocuments(): Promise<DocumentModel[]> {
+    return this.getClient().document.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }
