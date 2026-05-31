@@ -4,6 +4,8 @@ import { CreateDocumentDto } from './dto/create-document.dto';
 import { DocumentRepository } from './documents.repository';
 import { ChunkingService } from '../chunking/chunking.service';
 import { ChunkingRepository } from '../chunking/chunking.repository';
+import { AiService } from '../ai/ai.service';
+import { EmbeddingService } from '../embedding/embedding.service';
 
 @Injectable()
 export class DocumentsService {
@@ -11,6 +13,8 @@ export class DocumentsService {
     private readonly documentRepository: DocumentRepository,
     private readonly chunkingService: ChunkingService,
     private readonly chunkingRepository: ChunkingRepository,
+    private readonly aiService: AiService,
+    private readonly embeddingService: EmbeddingService,
   ) {}
 
   async createDocument(
@@ -20,8 +24,20 @@ export class DocumentsService {
       title: createDocumentDto.title,
       content: createDocumentDto.content,
     });
-    const chunks = this.chunkingService.chunkText(createDocumentDto.content);
-    await this.chunkingRepository.createMany(document.id, chunks);
+    const textChunks = this.chunkingService.chunkText(
+      createDocumentDto.content,
+    );
+    const savedChunks = await this.chunkingRepository.createMany(
+      document.id,
+      textChunks,
+    );
+    const embeddings = await Promise.all(
+      savedChunks.map((chunk) => this.aiService.createEmbedding(chunk.content)),
+    );
+    await this.embeddingService.createEmbeddings(
+      savedChunks.map((chunk) => chunk.id),
+      embeddings,
+    );
     return document;
   }
 }

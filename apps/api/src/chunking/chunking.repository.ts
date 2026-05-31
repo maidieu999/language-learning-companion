@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Chunk } from '@prisma/client';
 import { BaseRepository } from '../database/base.repository';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -8,12 +9,23 @@ export class ChunkingRepository extends BaseRepository {
     super(prisma);
   }
 
-  async createMany(documentId: string, chunks: string[]): Promise<void> {
+  async createMany(documentId: string, chunks: string[]): Promise<Chunk[]> {
+    if (chunks.length === 0) {
+      return [];
+    }
+
     const chunkData = chunks.map((chunk, index) => ({
       documentId,
       content: chunk,
       chunkIndex: index,
     }));
-    await this.getClient().chunk.createMany({ data: chunkData });
+    return this.getClient().chunk.createManyAndReturn({ data: chunkData });
+  }
+
+  findByDocumentId(documentId: string) {
+    return this.getClient().chunk.findMany({
+      where: { documentId },
+      orderBy: { chunkIndex: 'asc' },
+    });
   }
 }
