@@ -44,3 +44,75 @@ cd apps/api && npm test -- documents.service.spec
 - File upload (PDF, audio, etc.)
 - Background jobs for large documents
 - Update, delete, or re-index
+
+## 2. Vector similarity search + RAG — done
+
+Answer questions from ingested material: embed the query, find the closest chunks with pgvector, then generate a grounded reply with Gemini.
+
+### Flow
+
+1. **Embed query** — `RETRIEVAL_QUERY` via `AiService.createQueryEmbedding`
+2. **Retrieve** — cosine distance (`<=>`) on `Embedding.vector`, join `Chunk` and `Document`, optional filter by `documentId`
+3. **Rank** — top `topK` chunks (default 5, max 20); `similarity = 1 - distance`
+4. **Generate** — `AiService.generateAnswerFromContext` with `gemini-2.5-flash` over retrieved chunk text (skipped when no hits)
+
+Orchestration: `apps/api/src/search/search.service.ts`
+
+### API
+
+**POST /search**
+
+```json
+{
+  "query": "What does Xin chào mean?",
+  "topK": 5
+}
+```
+
+Optional: `"documentId": "<uuid>"` to search within one document.
+
+Response:
+
+```json
+{
+  "answer": "Xin chào is a common way to say hello in Vietnamese.",
+  "sources": [
+    {
+      "chunkId": "...",
+      "content": "Xin chào is the most common way to say hello...",
+      "chunkIndex": 0,
+      "documentId": "...",
+      "documentTitle": "Vietnamese greetings — lesson 1",
+      "similarity": 0.85
+    }
+  ]
+}
+```
+
+### Try it locally
+
+1. Complete [section 1](#1-data-ingestion-pipeline--done) so chunks and embeddings exist.
+2. Open Swagger at `http://localhost:3000/api`
+3. Call **POST /search** with a question that matches your ingested content.
+
+Example after ingesting the section 1 sample:
+
+```json
+{
+  "query": "What does Xin chào mean?",
+  "topK": 5
+}
+```
+
+### Tests
+
+```bash
+cd apps/api && npm test -- search.service.spec
+```
+
+### Out of scope (for now)
+
+- pgvector HNSW / IVFFlat index (sequential scan is fine for small corpora)
+- Streaming responses
+- Chat history or multi-turn sessions
+- Inline citation markers in the answer text
