@@ -6,6 +6,14 @@ export interface User {
   role: UserRole;
 }
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: UserRole;
+  createdAt: string;
+  documentCount: number;
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: User;

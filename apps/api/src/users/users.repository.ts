@@ -35,4 +35,25 @@ export class UsersRepository extends BaseRepository {
       data: { passwordHash },
     });
   }
+
+  listUsers(): Promise<
+    Array<{
+      id: string;
+      email: string;
+      role: UserModel['role'];
+      createdAt: Date;
+      _count: { documents: number };
+    }>
+  > {
+    return this.getClient().user.findMany({
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        _count: { select: { documents: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

@@ -1,5 +1,6 @@
 import { getAccessToken } from './auth';
 import type {
+  AdminUser,
   AuthResponse,
   CreateDocumentInput,
   Document,
@@ -144,4 +145,12 @@ export function search(input: SearchInput): Promise<SearchResult> {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export function listAdminUsers(): Promise<AdminUser[]> {
+  return request<AdminUser[]>('/admin/users');
+}
+
+export function listAdminUserDocuments(userId: string): Promise<Document[]> {
+  return request<Document[]>(`/admin/users/${userId}/documents`);
 }

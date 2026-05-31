@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtStrategy } from './jwt.strategy';
 import { PasswordResetRepository } from './password-reset.repository';
+import { RolesGuard } from './roles.guard';
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -35,11 +36,12 @@ function getJwtSecret(): string {
     AuthService,
     JwtStrategy,
     PasswordResetRepository,
+    RolesGuard,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
   ],
-  exports: [AuthService, JwtModule],
+  exports: [AuthService, JwtModule, RolesGuard],
 })
 export class AuthModule {}
