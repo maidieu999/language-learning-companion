@@ -8,6 +8,7 @@ AI language learning companion monorepo.
 - `apps/api` — NestJS backend
 - `packages/` — shared libraries (future)
 - `docs/` — project documentation
+- [ROADMAP.md](ROADMAP.md) — build progress and feature steps
 
 ## Development
 
