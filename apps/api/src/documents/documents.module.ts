@@ -11,5 +11,6 @@ import { DocumentsService } from './documents.service';
   imports: [PrismaModule, ChunkingModule, EmbeddingModule, AiModule],
   controllers: [DocumentsController],
   providers: [DocumentRepository, DocumentsService],
+  exports: [DocumentRepository, DocumentsService],
 })
 export class DocumentsModule {}

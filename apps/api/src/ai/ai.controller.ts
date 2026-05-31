@@ -1,9 +1,15 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { EmbeddingTestDto } from './dto/embedding-test.dto';
 
 @ApiTags('ai')
+@ApiBearerAuth()
 @Controller('ai')
 export class AiController {
   constructor(private readonly aiService: AiService) {}

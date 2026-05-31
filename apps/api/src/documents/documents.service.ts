@@ -18,11 +18,13 @@ export class DocumentsService {
   ) {}
 
   async createDocument(
+    userId: string,
     createDocumentDto: CreateDocumentDto,
   ): Promise<DocumentModel> {
     const document = await this.documentRepository.createDocument({
       title: createDocumentDto.title,
       content: createDocumentDto.content,
+      userId,
     });
     const textChunks = this.chunkingService.chunkText(
       createDocumentDto.content,
@@ -41,7 +43,7 @@ export class DocumentsService {
     return document;
   }
 
-  listDocuments(): Promise<DocumentModel[]> {
-    return this.documentRepository.listDocuments();
+  listDocuments(userId: string): Promise<DocumentModel[]> {
+    return this.documentRepository.listDocuments(userId);
   }
 }

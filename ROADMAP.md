@@ -140,4 +140,42 @@ App: `apps/web/app/components/companion-app.tsx`
 ### Out of scope (for now)
 
 - `GET /documents/:id`, update, or delete
-- Auth or mobile layout polish
+- Mobile layout polish
+
+## 4. User authentication — done
+
+Email/password accounts with JWT access tokens, per-user documents, and auth pages in the web app.
+
+### Data model
+
+- `User` — `email`, `passwordHash`, `role` (`LEARNER` or `ADMIN`)
+- `PasswordResetToken` — hashed reset tokens for dev password recovery
+- `Document.userId` — each document belongs to one user
+
+### API
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| `POST` | `/auth/register` | Public | Creates a `LEARNER` account |
+| `POST` | `/auth/login` | Public | Returns `accessToken` + user profile |
+| `GET` | `/auth/me` | Bearer | Current user |
+| `POST` | `/auth/forgot-password` | Public | Dev: returns `resetToken` in JSON when user exists |
+| `POST` | `/auth/reset-password` | Public | `{ token, newPassword }` |
+
+Protected: `GET/POST /documents`, `POST /search`, `POST /ai/embedding-test`.
+
+### Web
+
+- `/login`, `/signup`, `/forgot-password`, `/reset-password`
+- Home (`/`) requires a valid token; companion UI shows email and log out
+
+### Try it locally
+
+1. Set `JWT_SECRET` in `apps/api/.env` (see `.env.example`).
+2. Run migrate and seed: `npx prisma migrate dev && npx prisma db seed`.
+3. Sign up at `http://localhost:3001/signup`, or sign in as admin (`admin@example.com` / `adminpassword` by default).
+
+### Out of scope (for now)
+
+- Email delivery for password reset
+- OAuth, refresh tokens, email verification

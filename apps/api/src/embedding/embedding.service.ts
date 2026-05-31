@@ -16,7 +16,7 @@ export class EmbeddingService {
 
   async findSimilar(
     queryVector: number[],
-    options: { topK: number; documentId?: string },
+    options: { topK: number; userId: string; documentId?: string },
   ): Promise<SimilarChunkResult[]> {
     const hits = await this.embeddingRepository.findSimilar(
       queryVector,

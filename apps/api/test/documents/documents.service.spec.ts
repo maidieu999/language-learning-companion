@@ -23,10 +23,13 @@ describe('DocumentsService', () => {
     content: 'Xin chào means hello.',
   };
 
+  const userId = 'user-1';
+
   const document = {
     id: 'doc-1',
     title: createDocumentDto.title,
     content: createDocumentDto.content,
+    userId,
     createdAt: new Date('2026-01-01'),
   };
 
@@ -96,21 +99,22 @@ describe('DocumentsService', () => {
 
   describe('listDocuments', () => {
     it('returns documents from the repository', async () => {
-      const result = await service.listDocuments();
+      const result = await service.listDocuments(userId);
 
       expect(result).toEqual([document]);
-      expect(documentRepository.listDocuments).toHaveBeenCalled();
+      expect(documentRepository.listDocuments).toHaveBeenCalledWith(userId);
     });
   });
 
   describe('createDocument', () => {
     it('persists document, chunks, and embeddings in order with chunk ids', async () => {
-      const result = await service.createDocument(createDocumentDto);
+      const result = await service.createDocument(userId, createDocumentDto);
 
       expect(result).toBe(document);
       expect(documentRepository.createDocument).toHaveBeenCalledWith({
         title: createDocumentDto.title,
         content: createDocumentDto.content,
+        userId,
       });
       expect(chunkingService.chunkText).toHaveBeenCalledWith(
         createDocumentDto.content,
@@ -132,7 +136,7 @@ describe('DocumentsService', () => {
       chunkingService.chunkText.mockReturnValue([]);
       chunkingRepository.createMany.mockResolvedValue([]);
 
-      const result = await service.createDocument(createDocumentDto);
+      const result = await service.createDocument(userId, createDocumentDto);
 
       expect(result).toBe(document);
       expect(chunkingRepository.createMany).toHaveBeenCalledWith(

@@ -26,9 +26,19 @@ export class DocumentRepository extends BaseRepository {
     return this.getClient().document.findMany({ where });
   }
 
-  listDocuments(): Promise<DocumentModel[]> {
+  listDocuments(userId: string): Promise<DocumentModel[]> {
     return this.getClient().document.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  findDocumentForUser(
+    id: string,
+    userId: string,
+  ): Promise<DocumentModel | null> {
+    return this.getClient().document.findFirst({
+      where: { id, userId },
     });
   }
 }

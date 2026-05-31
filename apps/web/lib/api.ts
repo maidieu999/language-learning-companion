@@ -1,8 +1,16 @@
+import { getAccessToken } from './auth';
 import type {
+  AuthResponse,
   CreateDocumentInput,
   Document,
+  ForgotPasswordInput,
+  ForgotPasswordResponse,
+  LoginInput,
+  RegisterInput,
+  ResetPasswordInput,
   SearchInput,
   SearchResult,
+  User,
 } from './types';
 
 const API_BASE =
@@ -23,12 +31,18 @@ async function parseError(response: Response): Promise<string> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -36,6 +50,42 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export function register(input: RegisterInput): Promise<AuthResponse> {
+  return request<AuthResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function login(input: LoginInput): Promise<AuthResponse> {
+  return request<AuthResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getMe(): Promise<User> {
+  return request<User>('/auth/me');
+}
+
+export function forgotPassword(
+  input: ForgotPasswordInput,
+): Promise<ForgotPasswordResponse> {
+  return request<ForgotPasswordResponse>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function resetPassword(
+  input: ResetPasswordInput,
+): Promise<{ message: string }> {
+  return request<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function listDocuments(): Promise<Document[]> {

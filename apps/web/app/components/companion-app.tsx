@@ -1,8 +1,14 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { createDocument, listDocuments, search } from '@/lib/api';
-import type { Document, SearchResult } from '@/lib/types';
+import { clearAccessToken } from '@/lib/auth';
+import type { Document, SearchResult, User } from '@/lib/types';
+
+interface CompanionAppProps {
+  user: User;
+}
 
 type IngestStatus = 'idle' | 'loading' | 'success' | 'error';
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -22,7 +28,8 @@ function contentPreview(content: string, maxLength = 160): string {
   return `${content.slice(0, maxLength).trimEnd()}…`;
 }
 
-export function CompanionApp() {
+export function CompanionApp({ user }: CompanionAppProps) {
+  const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [listStatus, setListStatus] = useState<ListStatus>('idle');
   const [listError, setListError] = useState<string | null>(null);
@@ -103,9 +110,24 @@ export function CompanionApp() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-4 py-10 sm:px-6">
       <header className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-wide text-teal-700 dark:text-teal-400">
-          Language learning companion
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-medium uppercase tracking-wide text-teal-700 dark:text-teal-400">
+            Language learning companion
+          </p>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">{user.email}</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearAccessToken();
+                router.replace('/login');
+              }}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            >
+              Log out
+            </button>
+          </div>
+        </div>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           Learn from your own material
         </h1>
@@ -128,7 +150,7 @@ export function CompanionApp() {
               Saved material
             </h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              All documents stored in the database, newest first.
+              Your saved documents, newest first.
             </p>
           </div>
           <button

@@ -29,9 +29,9 @@ export class EmbeddingRepository extends BaseRepository {
 
   async findSimilar(
     queryVector: number[],
-    options: { topK: number; documentId?: string },
+    options: { topK: number; userId: string; documentId?: string },
   ): Promise<SimilarChunkHit[]> {
-    const { topK, documentId } = options;
+    const { topK, userId, documentId } = options;
     const vector = `[${queryVector.join(',')}]`;
     const query = `SELECT
   c.id AS "chunkId",
@@ -43,12 +43,14 @@ export class EmbeddingRepository extends BaseRepository {
 FROM "Embedding" e
 INNER JOIN "Chunk" c ON c.id = e."chunkId"
 INNER JOIN "Document" d ON d.id = c."documentId"
-WHERE ($2::text IS NULL OR d.id = $2)
+WHERE d."userId" = $2
+  AND ($3::text IS NULL OR d.id = $3)
 ORDER BY e.vector <=> $1::vector ASC
-LIMIT $3`;
+LIMIT $4`;
     const results = (await this.getClient().$queryRawUnsafe(
       query,
       vector,
+      userId,
       documentId ?? null,
       topK,
     )) as SimilarChunkHit[];

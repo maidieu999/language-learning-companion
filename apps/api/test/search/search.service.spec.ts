@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AiService } from 'src/ai/ai.service';
+import { DocumentRepository } from 'src/documents/documents.repository';
 import { EmbeddingService } from 'src/embedding/embedding.service';
 import type { SimilarChunkResult } from 'src/embedding/embedding.service';
 import { SearchService } from 'src/search/search.service';
@@ -11,7 +12,9 @@ describe('SearchService', () => {
     generateAnswerFromContext: jest.Mock;
   };
   let embeddingService: { findSimilar: jest.Mock };
+  let documentRepository: { findDocumentForUser: jest.Mock };
 
+  const userId = 'user-1';
   const query = 'What does Xin chào mean?';
   const queryVector = [0.1, 0.2, 0.3];
 
@@ -37,12 +40,16 @@ describe('SearchService', () => {
     embeddingService = {
       findSimilar: jest.fn().mockResolvedValue(hits),
     };
+    documentRepository = {
+      findDocumentForUser: jest.fn().mockResolvedValue({ id: 'doc-1' }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SearchService,
         { provide: AiService, useValue: aiService },
         { provide: EmbeddingService, useValue: embeddingService },
+        { provide: DocumentRepository, useValue: documentRepository },
       ],
     }).compile();
 
@@ -55,11 +62,12 @@ describe('SearchService', () => {
 
   describe('search', () => {
     it('embeds query, retrieves similar chunks, and generates an answer', async () => {
-      const result = await service.search(query);
+      const result = await service.search(userId, query);
 
       expect(aiService.createQueryEmbedding).toHaveBeenCalledWith(query);
       expect(embeddingService.findSimilar).toHaveBeenCalledWith(queryVector, {
         topK: 5,
+        userId,
         documentId: undefined,
       });
       expect(aiService.generateAnswerFromContext).toHaveBeenCalledWith(query, [
@@ -81,10 +89,15 @@ describe('SearchService', () => {
     it('passes topK and documentId to findSimilar', async () => {
       const documentId = 'doc-1';
 
-      await service.search(query, documentId, 3);
+      await service.search(userId, query, documentId, 3);
 
+      expect(documentRepository.findDocumentForUser).toHaveBeenCalledWith(
+        documentId,
+        userId,
+      );
       expect(embeddingService.findSimilar).toHaveBeenCalledWith(queryVector, {
         topK: 3,
+        userId,
         documentId,
       });
     });
@@ -92,7 +105,7 @@ describe('SearchService', () => {
     it('returns empty sources and skips generation when no hits', async () => {
       embeddingService.findSimilar.mockResolvedValue([]);
 
-      const result = await service.search(query);
+      const result = await service.search(userId, query);
 
       expect(aiService.generateAnswerFromContext).not.toHaveBeenCalled();
       expect(result).toEqual({

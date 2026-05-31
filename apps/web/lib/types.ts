@@ -1,3 +1,41 @@
+export type UserRole = 'LEARNER' | 'ADMIN';
+
+export interface User {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  user: User;
+}
+
+export interface RegisterInput {
+  email: string;
+  password: string;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+  resetToken?: string;
+  expiresAt?: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  newPassword: string;
+}
+
 export interface Document {
   id: string;
   title: string;
