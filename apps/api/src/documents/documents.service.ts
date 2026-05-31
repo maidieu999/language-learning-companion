@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { DocumentModel } from '../database/prisma.types';
 import { CreateDocumentDto } from './dto/create-document.dto';
+import { UpdateDocumentDto } from './dto/update-document.dto';
 import { DocumentRepository } from './documents.repository';
 import { ChunkingService } from '../chunking/chunking.service';
 import { ChunkingRepository } from '../chunking/chunking.repository';
@@ -26,11 +31,88 @@ export class DocumentsService {
       content: createDocumentDto.content,
       userId,
     });
-    const textChunks = this.chunkingService.chunkText(
-      createDocumentDto.content,
+    await this.indexDocumentContent(document.id, createDocumentDto.content);
+    return document;
+  }
+
+  listDocuments(userId: string): Promise<DocumentModel[]> {
+    return this.documentRepository.listDocuments(userId);
+  }
+
+  async getDocument(userId: string, id: string): Promise<DocumentModel> {
+    return this.getDocumentForUserOrThrow(id, userId);
+  }
+
+  async deleteDocument(userId: string, id: string): Promise<void> {
+    await this.getDocumentForUserOrThrow(id, userId);
+    await this.documentRepository.deleteDocumentForUser(id, userId);
+  }
+
+  async updateDocument(
+    userId: string,
+    id: string,
+    updateDocumentDto: UpdateDocumentDto,
+  ): Promise<DocumentModel> {
+    if (
+      updateDocumentDto.title === undefined &&
+      updateDocumentDto.content === undefined
+    ) {
+      throw new BadRequestException(
+        'At least one of title or content must be provided',
+      );
+    }
+
+    const existing = await this.getDocumentForUserOrThrow(id, userId);
+
+    const updated = await this.documentRepository.updateDocument(id, userId, {
+      ...(updateDocumentDto.title !== undefined
+        ? { title: updateDocumentDto.title }
+        : {}),
+      ...(updateDocumentDto.content !== undefined
+        ? { content: updateDocumentDto.content }
+        : {}),
+    });
+    if (!updated) {
+      throw new NotFoundException('Document not found');
+    }
+
+    if (
+      updateDocumentDto.content !== undefined &&
+      updateDocumentDto.content !== existing.content
+    ) {
+      await this.clearDocumentIndex(id);
+      await this.indexDocumentContent(id, updateDocumentDto.content);
+    }
+
+    return updated;
+  }
+
+  private async getDocumentForUserOrThrow(
+    id: string,
+    userId: string,
+  ): Promise<DocumentModel> {
+    const document = await this.documentRepository.findDocumentForUser(
+      id,
+      userId,
     );
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+    return document;
+  }
+
+  private async clearDocumentIndex(documentId: string): Promise<void> {
+    await this.embeddingService.deleteByDocumentId(documentId);
+    await this.chunkingRepository.deleteByDocumentId(documentId);
+  }
+
+  private async indexDocumentContent(
+    documentId: string,
+    content: string,
+  ): Promise<void> {
+    const textChunks = this.chunkingService.chunkText(content);
     const savedChunks = await this.chunkingRepository.createMany(
-      document.id,
+      documentId,
       textChunks,
     );
     const embeddings = await Promise.all(
@@ -40,10 +122,5 @@ export class DocumentsService {
       savedChunks.map((chunk) => chunk.id),
       embeddings,
     );
-    return document;
-  }
-
-  listDocuments(userId: string): Promise<DocumentModel[]> {
-    return this.documentRepository.listDocuments(userId);
   }
 }

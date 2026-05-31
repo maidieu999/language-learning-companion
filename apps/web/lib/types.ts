@@ -48,6 +48,11 @@ export interface CreateDocumentInput {
   content: string;
 }
 
+export interface UpdateDocumentInput {
+  title?: string;
+  content?: string;
+}
+
 export interface SearchSource {
   chunkId: string;
   content: string;

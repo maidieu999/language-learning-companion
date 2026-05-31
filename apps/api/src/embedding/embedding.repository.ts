@@ -27,6 +27,14 @@ export class EmbeddingRepository extends BaseRepository {
     );
   }
 
+  deleteByDocumentId(documentId: string): Promise<void> {
+    return this.getClient()
+      .embedding.deleteMany({
+        where: { chunk: { documentId } },
+      })
+      .then(() => undefined);
+  }
+
   async findSimilar(
     queryVector: number[],
     options: { topK: number; userId: string; documentId?: string },

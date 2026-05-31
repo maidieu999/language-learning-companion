@@ -2,7 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { createDocument, listDocuments, search } from '@/lib/api';
+import {
+  createDocument,
+  deleteDocument,
+  listDocuments,
+  search,
+  updateDocument,
+} from '@/lib/api';
 import { clearAccessToken } from '@/lib/auth';
 import type { Document, SearchResult, User } from '@/lib/types';
 
@@ -13,6 +19,7 @@ interface CompanionAppProps {
 type IngestStatus = 'idle' | 'loading' | 'success' | 'error';
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
 type ListStatus = 'idle' | 'loading' | 'success' | 'error';
+type EditStatus = 'idle' | 'loading' | 'error';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -34,6 +41,13 @@ export function CompanionApp({ user }: CompanionAppProps) {
   const [listStatus, setListStatus] = useState<ListStatus>('idle');
   const [listError, setListError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editStatus, setEditStatus] = useState<EditStatus>('idle');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -84,6 +98,76 @@ export function CompanionApp({ user }: CompanionAppProps) {
     } catch (error) {
       setIngestStatus('error');
       setIngestError(error instanceof Error ? error.message : 'Failed to save material');
+    }
+  }
+
+  function startEditing(doc: Document) {
+    setEditingId(doc.id);
+    setEditTitle(doc.title);
+    setEditContent(doc.content);
+    setEditStatus('idle');
+    setEditError(null);
+    setExpandedId(doc.id);
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setEditTitle('');
+    setEditContent('');
+    setEditStatus('idle');
+    setEditError(null);
+  }
+
+  async function handleSaveEdit(event: FormEvent, docId: string) {
+    event.preventDefault();
+    setEditStatus('loading');
+    setEditError(null);
+
+    try {
+      await updateDocument(docId, {
+        title: editTitle.trim(),
+        content: editContent,
+      });
+      cancelEditing();
+      await loadDocuments();
+    } catch (error) {
+      setEditStatus('error');
+      setEditError(
+        error instanceof Error ? error.message : 'Failed to update material',
+      );
+    }
+  }
+
+  async function handleDelete(doc: Document) {
+    if (
+      !window.confirm(
+        `Delete "${doc.title}"? This removes the document and its search index.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(doc.id);
+    setDeleteError(null);
+
+    try {
+      await deleteDocument(doc.id);
+      if (expandedId === doc.id) {
+        setExpandedId(null);
+      }
+      if (editingId === doc.id) {
+        cancelEditing();
+      }
+      if (documentId === doc.id) {
+        setDocumentId('');
+      }
+      await loadDocuments();
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : 'Failed to delete material',
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -184,36 +268,127 @@ export function CompanionApp({ user }: CompanionAppProps) {
           </p>
         ) : null}
 
+        {deleteError ? (
+          <p
+            role="alert"
+            className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-100"
+          >
+            {deleteError}
+          </p>
+        ) : null}
+
         {documents.length > 0 ? (
           <ul className="mt-4 space-y-3">
             {documents.map((doc) => {
               const expanded = expandedId === doc.id;
+              const editing = editingId === doc.id;
               return (
                 <li
                   key={doc.id}
                   className="rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedId(expanded ? null : doc.id)
-                    }
-                    className="flex w-full flex-col gap-1 px-4 py-3 text-left"
-                    aria-expanded={expanded}
-                  >
-                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                      {doc.title}
-                    </span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {formatDate(doc.createdAt)}
-                    </span>
-                    {!expanded ? (
-                      <span className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
-                        {contentPreview(doc.content)}
+                  <div className="flex items-start gap-2 px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editing) {
+                          return;
+                        }
+                        setExpandedId(expanded ? null : doc.id);
+                      }}
+                      className="flex min-w-0 flex-1 flex-col gap-1 text-left"
+                      aria-expanded={expanded}
+                    >
+                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        {doc.title}
                       </span>
-                    ) : null}
-                  </button>
-                  {expanded ? (
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {formatDate(doc.createdAt)}
+                      </span>
+                      {!expanded && !editing ? (
+                        <span className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
+                          {contentPreview(doc.content)}
+                        </span>
+                      ) : null}
+                    </button>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startEditing(doc)}
+                        disabled={deletingId === doc.id}
+                        className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-800 transition hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(doc)}
+                        disabled={deletingId === doc.id}
+                        className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-800 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-200 dark:hover:bg-red-950"
+                      >
+                        {deletingId === doc.id ? 'Deleting…' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                  {editing ? (
+                    <form
+                      onSubmit={(e) => void handleSaveEdit(e, doc.id)}
+                      className="space-y-4 border-t border-zinc-200 px-4 py-3 dark:border-zinc-800"
+                    >
+                      <label className="block space-y-1.5">
+                        <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                          Title
+                        </span>
+                        <input
+                          type="text"
+                          required
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                        />
+                      </label>
+                      <label className="block space-y-1.5">
+                        <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                          Content
+                        </span>
+                        <textarea
+                          required
+                          rows={6}
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          disabled={editStatus === 'loading'}
+                          className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-60"
+                        >
+                          {editStatus === 'loading'
+                            ? 'Saving and re-indexing…'
+                            : 'Save changes'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditing}
+                          disabled={editStatus === 'loading'}
+                          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      {editError ? (
+                        <p
+                          role="alert"
+                          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-100"
+                        >
+                          {editError}
+                        </p>
+                      ) : null}
+                    </form>
+                  ) : null}
+                  {expanded && !editing ? (
                     <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-800">
                       <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
                         {doc.content}

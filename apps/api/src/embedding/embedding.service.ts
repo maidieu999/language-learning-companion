@@ -14,6 +14,10 @@ export class EmbeddingService {
     return this.embeddingRepository.createMany(chunkIds, embeddings);
   }
 
+  deleteByDocumentId(documentId: string): Promise<void> {
+    return this.embeddingRepository.deleteByDocumentId(documentId);
+  }
+
   async findSimilar(
     queryVector: number[],
     options: { topK: number; userId: string; documentId?: string },

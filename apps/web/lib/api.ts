@@ -10,6 +10,7 @@ import type {
   ResetPasswordInput,
   SearchInput,
   SearchResult,
+  UpdateDocumentInput,
   User,
 } from './types';
 
@@ -31,6 +32,27 @@ async function parseError(response: Response): Promise<string> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await sendRequest(path, init);
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function requestVoid(path: string, init?: RequestInit): Promise<void> {
+  const response = await sendRequest(path, init);
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+}
+
+async function sendRequest(
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
   const token = getAccessToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -49,7 +71,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(await parseError(response));
   }
 
-  return response.json() as Promise<T>;
+  return response;
 }
 
 export function register(input: RegisterInput): Promise<AuthResponse> {
@@ -97,6 +119,24 @@ export function createDocument(input: CreateDocumentInput): Promise<Document> {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export function getDocument(id: string): Promise<Document> {
+  return request<Document>(`/documents/${id}`);
+}
+
+export function updateDocument(
+  id: string,
+  input: UpdateDocumentInput,
+): Promise<Document> {
+  return request<Document>(`/documents/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteDocument(id: string): Promise<void> {
+  return requestVoid(`/documents/${id}`, { method: 'DELETE' });
 }
 
 export function search(input: SearchInput): Promise<SearchResult> {

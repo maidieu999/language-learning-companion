@@ -41,4 +41,35 @@ export class DocumentRepository extends BaseRepository {
       where: { id, userId },
     });
   }
+
+  async updateDocument(
+    id: string,
+    userId: string,
+    data: { title?: string; content?: string },
+  ): Promise<DocumentModel | null> {
+    const existing = await this.findDocumentForUser(id, userId);
+    if (!existing) {
+      return null;
+    }
+    return this.getClient().document.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async deleteDocumentForUser(id: string, userId: string): Promise<void> {
+    await this.getClient().$transaction(async (tx) => {
+      const existing = await tx.document.findFirst({
+        where: { id, userId },
+      });
+      if (!existing) {
+        return;
+      }
+      await tx.embedding.deleteMany({
+        where: { chunk: { documentId: id } },
+      });
+      await tx.chunk.deleteMany({ where: { documentId: id } });
+      await tx.document.delete({ where: { id } });
+    });
+  }
 }

@@ -28,4 +28,10 @@ export class ChunkingRepository extends BaseRepository {
       orderBy: { chunkIndex: 'asc' },
     });
   }
+
+  deleteByDocumentId(documentId: string): Promise<void> {
+    return this.getClient()
+      .chunk.deleteMany({ where: { documentId } })
+      .then(() => undefined);
+  }
 }
