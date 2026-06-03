@@ -1,6 +1,6 @@
 # Language Learning Companion
 
-AI language learning companion monorepo.
+A monorepo for a personal language-learning app. Learners upload lesson material (text, PDF, or `.txt`), ask questions grounded in that content via vector search and RAG, and will practice describing images with AI feedback (in progress). Built with a Next.js web app and a NestJS API backed by Postgres (pgvector) and Gemini.
 
 ## Structure
 
