@@ -709,12 +709,18 @@ export function CompanionApp({ user }: CompanionAppProps) {
               <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 Answer
               </h3>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {searchResult.strategy === 'full_document'
+                  ? 'Answered using full document'
+                  : 'Answered from matching excerpts'}
+              </p>
               <p className="mt-2 whitespace-pre-wrap text-base leading-relaxed text-zinc-900 dark:text-zinc-100">
                 {searchResult.answer}
               </p>
             </div>
 
-            {searchResult.sources.length > 0 ? (
+            {searchResult.strategy === 'rag' &&
+            searchResult.sources.length > 0 ? (
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                   Sources

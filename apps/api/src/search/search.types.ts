@@ -1,3 +1,5 @@
+import type { QueryIntent, SearchStrategy } from './query-intent.types';
+
 export interface SearchSource {
   chunkId: string;
   content: string;
@@ -10,4 +12,6 @@ export interface SearchSource {
 export interface SearchResult {
   answer: string;
   sources: SearchSource[];
+  strategy: SearchStrategy;
+  intent: QueryIntent;
 }

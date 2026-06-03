@@ -76,9 +76,14 @@ export interface SearchSource {
   similarity: number;
 }
 
+export type SearchStrategy = 'rag' | 'full_document';
+export type QueryIntent = 'retrieval' | 'document_scope';
+
 export interface SearchResult {
   answer: string;
   sources: SearchSource[];
+  strategy: SearchStrategy;
+  intent: QueryIntent;
 }
 
 export interface SearchInput {

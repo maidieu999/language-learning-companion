@@ -62,14 +62,20 @@ cd apps/api && npm test -- documents.service.spec
 
 ## 2. Vector similarity search + RAG — done
 
-Answer questions from ingested material: embed the query, find the closest chunks with pgvector, then generate a grounded reply with Gemini.
+Answer questions from ingested material. A classifier picks **retrieval** (vector search + excerpts) or **document_scope** (full document). Summarize-style questions require a selected `documentId`.
 
 ### Flow
 
-1. **Embed query** — `RETRIEVAL_QUERY` via `AiService.createQueryEmbedding`
-2. **Retrieve** — cosine distance (`<=>`) on `Embedding.vector`, join `Chunk` and `Document`, optional filter by `documentId`
-3. **Rank** — top `topK` chunks (default 5, max 20); `similarity = 1 - distance`
-4. **Generate** — `AiService.generateAnswerFromContext` with `gemini-2.5-flash` over retrieved chunk text (skipped when no hits)
+1. **Classify** — `AiService.classifyQueryIntent` (`gemini-2.5-flash`, JSON intent)
+2. **Retrieval path** (`intent: retrieval`):
+   - Embed query — `RETRIEVAL_QUERY` via `AiService.createQueryEmbedding`
+   - Retrieve — cosine distance (`<=>`) on `Embedding.vector`, join `Chunk` and `Document`, optional filter by `documentId`
+   - Rank — top `topK` chunks (default 5, max 20); `similarity = 1 - distance`
+   - Generate — `AiService.generateAnswerFromContext` over retrieved chunk text (skipped when no hits)
+3. **Document-scope path** (`intent: document_scope`, `documentId` required):
+   - Load full `Document.content` and all chunks for the document
+   - Single-shot generate when content ≤ 80k chars; otherwise map-reduce over chunk batches
+   - Returns all chunks as sources (`strategy: full_document`)
 
 Orchestration: `apps/api/src/search/search.service.ts`
 
@@ -84,13 +90,15 @@ Orchestration: `apps/api/src/search/search.service.ts`
 }
 ```
 
-Optional: `"documentId": "<uuid>"` to search within one document.
+Optional: `"documentId": "<uuid>"` to search within one document. Required for summarize, outline, or whole-lesson questions (`document_scope` intent); otherwise the API returns 400.
 
 Response:
 
 ```json
 {
   "answer": "Xin chào is a common way to say hello in Vietnamese.",
+  "strategy": "rag",
+  "intent": "retrieval",
   "sources": [
     {
       "chunkId": "...",
