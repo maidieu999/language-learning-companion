@@ -16,6 +16,12 @@ enum Role {
   ADMIN
 }
 
+enum DocumentSourceType {
+  PASTE
+  PDF
+  TEXT_FILE
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -48,6 +54,11 @@ model Document {
   title     String
   content   String
   userId    String
+
+  sourceType         DocumentSourceType @default(PASTE)
+  originalFilename   String?
+  storedFileKey      String?
+  mimeType           String?
 
   createdAt DateTime @default(now())
 

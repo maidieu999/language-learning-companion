@@ -13,10 +13,11 @@ AI language learning companion monorepo.
 ## Development
 
 ```bash
-# Postgres (pgvector) — host port 5433 to avoid clashing with local Postgres on 5432
-docker compose up -d postgres
+# Postgres (pgvector) + LocalStack (S3) — see apps/api/.env.example for S3_* / AWS_* vars
+docker compose up -d
 
 # API (copy apps/api/.env.example to .env, then migrate + seed + run) — port 3000
+# Uploaded PDFs and text files are stored in S3 (LocalStack at http://localhost:4566 in dev)
 cd apps/api && npm install && npx prisma migrate dev && npx prisma db seed && npm run start:dev
 
 # Web — port 3001 (calls API at http://localhost:3000)

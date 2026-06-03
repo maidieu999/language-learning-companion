@@ -16,5 +16,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  localstack:
+    image: localstack/localstack:latest
+    container_name: llc-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: us-east-1
+      S3_BUCKET: llc-documents
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./docker/localstack/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh
+
 volumes:
   postgres_data:
+  localstack_data:

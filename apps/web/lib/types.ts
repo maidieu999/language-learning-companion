@@ -44,10 +44,16 @@ export interface ResetPasswordInput {
   newPassword: string;
 }
 
+export type DocumentSourceType = 'PASTE' | 'PDF' | 'TEXT_FILE';
+
 export interface Document {
   id: string;
   title: string;
   content: string;
+  sourceType: DocumentSourceType;
+  originalFilename?: string | null;
+  mimeType?: string | null;
+  hasFile: boolean;
   createdAt: string;
 }
 
