@@ -3,7 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { FormEvent, useState } from 'react';
-import { AuthPageShell } from '@/app/components/auth-page-shell';
+import {
+  AuthPageShell,
+  authLinkClassName,
+} from '@/app/components/auth-page-shell';
+import { Button } from '@/app/components/ui/button';
+import { Input } from '@/app/components/ui/input';
 import { login } from '@/lib/api';
 import { setAccessToken } from '@/lib/auth';
 
@@ -37,10 +42,7 @@ export default function LoginPage() {
       footer={
         <>
           <span>New here? </span>
-          <Link
-            href="/signup"
-            className="font-medium text-teal-700 hover:underline dark:text-teal-400"
-          >
+          <Link href="/signup" className={authLinkClassName}>
             Create an account
           </Link>
         </>
@@ -51,13 +53,12 @@ export default function LoginPage() {
           <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
             Email
           </span>
-          <input
+          <Input
             type="email"
             required
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
         </label>
 
@@ -65,33 +66,25 @@ export default function LoginPage() {
           <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
             Password
           </span>
-          <input
+          <Input
             type="password"
             required
             minLength={8}
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
         </label>
 
         <p className="text-right text-sm">
-          <Link
-            href="/forgot-password"
-            className="font-medium text-teal-700 hover:underline dark:text-teal-400"
-          >
+          <Link href="/forgot-password" className={authLinkClassName}>
             Forgot password?
           </Link>
         </p>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Signing in…' : 'Sign in'}
-        </button>
+        </Button>
       </form>
 
       {error ? (

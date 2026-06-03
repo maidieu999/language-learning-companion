@@ -2,6 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { AppBrand } from '@/app/components/ui/app-brand';
+import { AppPageShell } from '@/app/components/ui/app-page-shell';
+import { Button } from '@/app/components/ui/button';
+import { Card } from '@/app/components/ui/card';
 import { listAdminUserDocuments, listAdminUsers } from '@/lib/api';
 import { clearAccessToken } from '@/lib/auth';
 import type { AdminUser, Document, User } from '@/lib/types';
@@ -96,24 +100,23 @@ export function AdminApp({ user }: AdminAppProps) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-4 py-10 sm:px-6">
+    <AppPageShell>
       <header className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-medium uppercase tracking-wide text-teal-700 dark:text-teal-400">
-            Admin
-          </p>
+          <AppBrand suffix="Admin" />
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="text-zinc-600 dark:text-zinc-400">{user.email}</span>
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 clearAccessToken();
                 router.replace('/login');
               }}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              className="px-3 py-1.5"
             >
               Log out
-            </button>
+            </Button>
           </div>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -127,11 +130,11 @@ export function AdminApp({ user }: AdminAppProps) {
       </header>
 
       {selectedUser ? (
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <Card>
           <button
             type="button"
             onClick={handleBackToUsers}
-            className="mb-4 text-sm font-medium text-teal-700 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300"
+            className="mb-4 text-sm font-medium text-brand hover:text-brand-dark dark:text-brand-light dark:hover:text-brand-light"
           >
             ← Back to users
           </button>
@@ -164,7 +167,7 @@ export function AdminApp({ user }: AdminAppProps) {
                 return (
                   <li
                     key={doc.id}
-                    className="rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+                    className="rounded-lg border border-zinc-200 bg-zinc-50 transition hover:ring-1 hover:ring-brand-light/10 dark:border-zinc-800 dark:bg-zinc-900"
                   >
                     <button
                       type="button"
@@ -198,21 +201,22 @@ export function AdminApp({ user }: AdminAppProps) {
               })}
             </ul>
           ) : null}
-        </section>
+        </Card>
       ) : (
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
               All users
             </h2>
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => void loadUsers()}
               disabled={usersStatus === 'loading'}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              className="px-3 py-1.5"
             >
               {usersStatus === 'loading' ? 'Refreshing…' : 'Refresh'}
-            </button>
+            </Button>
           </div>
 
           {usersError ? (
@@ -256,8 +260,8 @@ export function AdminApp({ user }: AdminAppProps) {
               ))}
             </ul>
           ) : null}
-        </section>
+        </Card>
       )}
-    </div>
+    </AppPageShell>
   );
 }

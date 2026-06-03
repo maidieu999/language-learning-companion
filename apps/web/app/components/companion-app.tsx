@@ -12,6 +12,10 @@ import {
   search,
   updateDocument,
 } from '@/lib/api';
+import { AppBrand } from '@/app/components/ui/app-brand';
+import { AppPageShell } from '@/app/components/ui/app-page-shell';
+import { Button } from '@/app/components/ui/button';
+import { Card } from '@/app/components/ui/card';
 import { clearAccessToken } from '@/lib/auth';
 import type { Document, DocumentSourceType, SearchResult, User } from '@/lib/types';
 
@@ -243,24 +247,23 @@ export function CompanionApp({ user }: CompanionAppProps) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-4 py-10 sm:px-6">
+    <AppPageShell>
       <header className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-medium uppercase tracking-wide text-teal-700 dark:text-teal-400">
-            Language learning companion
-          </p>
+          <AppBrand />
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="text-zinc-600 dark:text-zinc-400">{user.email}</span>
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 clearAccessToken();
                 router.replace('/login');
               }}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              className="px-3 py-1.5"
             >
               Log out
-            </button>
+            </Button>
           </div>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -272,10 +275,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
         </p>
       </header>
 
-      <section
-        aria-labelledby="saved-material-heading"
-        className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
-      >
+      <Card aria-labelledby="saved-material-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2
@@ -336,7 +336,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
               return (
                 <li
                   key={doc.id}
-                  className="rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+                  className="rounded-lg border border-zinc-200 bg-zinc-50 transition hover:ring-1 hover:ring-brand-light/10 dark:border-zinc-800 dark:bg-zinc-900"
                 >
                   <div className="flex items-start gap-2 px-4 py-3">
                     <button
@@ -400,7 +400,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
                           required
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-brand/30 focus:border-brand focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
                         />
                       </label>
                       {isFileDocument(doc) ? (
@@ -440,7 +440,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
                               onChange={(e) =>
                                 setEditReplaceFile(e.target.files?.[0] ?? null)
                               }
-                              className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white dark:text-zinc-300"
+                              className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-2 file:text-sm file:font-medium file:text-white dark:text-zinc-300"
                             />
                           </label>
                           <p className="whitespace-pre-wrap rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
@@ -457,7 +457,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
                             rows={6}
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                            className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-brand/30 focus:border-brand focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
                           />
                         </label>
                       )}
@@ -465,7 +465,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
                         <button
                           type="submit"
                           disabled={editStatus === 'loading'}
-                          className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-60"
+                          className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white transition hover:bg-brand-dark disabled:opacity-60"
                         >
                           {editStatus === 'loading'
                             ? 'Saving and re-indexing…'
@@ -502,12 +502,9 @@ export function CompanionApp({ user }: CompanionAppProps) {
             })}
           </ul>
         ) : null}
-      </section>
+      </Card>
 
-      <section
-        aria-labelledby="add-material-heading"
-        className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
-      >
+      <Card aria-labelledby="add-material-heading">
         <h2
           id="add-material-heading"
           className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
@@ -559,7 +556,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
                   ? 'Defaults to the file name'
                   : 'Vietnamese greetings — lesson 1'
               }
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-brand/30 focus:border-brand focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
             />
           </label>
 
@@ -574,7 +571,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Xin chào is the most common way to say hello in Vietnamese..."
-                className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-brand/30 focus:border-brand focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
               />
             </label>
           ) : (
@@ -587,16 +584,12 @@ export function CompanionApp({ user }: CompanionAppProps) {
                 required
                 accept=".pdf,.txt,application/pdf,text/plain"
                 onChange={(e) => setIngestFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white dark:text-zinc-300"
+                className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-2 file:text-sm file:font-medium file:text-white dark:text-zinc-300"
               />
             </label>
           )}
 
-          <button
-            type="submit"
-            disabled={ingestStatus === 'loading'}
-            className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="submit" disabled={ingestStatus === 'loading'}>
             {ingestStatus === 'loading'
               ? ingestMode === 'file'
                 ? 'Uploading and embedding…'
@@ -604,13 +597,13 @@ export function CompanionApp({ user }: CompanionAppProps) {
               : ingestMode === 'file'
                 ? 'Upload material'
                 : 'Save material'}
-          </button>
+          </Button>
         </form>
 
         {ingestMessage ? (
           <p
             role="status"
-            className="mt-4 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900 dark:bg-teal-950 dark:text-teal-100"
+            className="mt-4 rounded-lg bg-accent/15 px-3 py-2 text-sm text-zinc-900 dark:bg-accent/10 dark:text-zinc-100"
           >
             {ingestMessage}
           </p>
@@ -623,12 +616,9 @@ export function CompanionApp({ user }: CompanionAppProps) {
             {ingestError}
           </p>
         ) : null}
-      </section>
+      </Card>
 
-      <section
-        aria-labelledby="ask-heading"
-        className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
-      >
+      <Card aria-labelledby="ask-heading">
         <h2
           id="ask-heading"
           className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
@@ -647,7 +637,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="What does Xin chào mean?"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-brand/30 focus:border-brand focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
             />
           </label>
 
@@ -659,7 +649,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
               <select
                 value={documentId}
                 onChange={(e) => setDocumentId(e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-brand/30 focus:border-brand focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
               >
                 <option value="">All saved material</option>
                 {documents.map((doc) => (
@@ -680,18 +670,14 @@ export function CompanionApp({ user }: CompanionAppProps) {
                 max={20}
                 value={topK}
                 onChange={(e) => setTopK(Number(e.target.value))}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-brand/30 focus:border-brand focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
               />
             </label>
           </div>
 
-          <button
-            type="submit"
-            disabled={searchStatus === 'loading'}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-          >
+          <Button type="submit" disabled={searchStatus === 'loading'}>
             {searchStatus === 'loading' ? 'Searching…' : 'Ask'}
-          </button>
+          </Button>
         </form>
 
         {searchError ? (
@@ -735,7 +721,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
                           {source.documentTitle}
                         </p>
-                        <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-900 dark:bg-teal-950 dark:text-teal-100">
+                        <span className="rounded-full bg-brand-light/25 px-2 py-0.5 text-xs font-medium text-brand-dark dark:bg-brand-light/10 dark:text-brand-light">
                           {(source.similarity * 100).toFixed(0)}% match
                         </span>
                       </div>
@@ -749,7 +735,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
             ) : null}
           </div>
         ) : null}
-      </section>
-    </div>
+      </Card>
+    </AppPageShell>
   );
 }

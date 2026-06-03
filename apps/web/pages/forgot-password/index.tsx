@@ -2,7 +2,12 @@
 
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
-import { AuthPageShell } from '@/app/components/auth-page-shell';
+import {
+  AuthPageShell,
+  authLinkClassName,
+} from '@/app/components/auth-page-shell';
+import { Button } from '@/app/components/ui/button';
+import { Input } from '@/app/components/ui/input';
 import { forgotPassword } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
@@ -40,10 +45,7 @@ export default function ForgotPasswordPage() {
       title="Forgot password"
       description="Enter your email. In development, the API returns a reset token you can use on the reset page."
       footer={
-        <Link
-          href="/login"
-          className="font-medium text-teal-700 hover:underline dark:text-teal-400"
-        >
+        <Link href="/login" className={authLinkClassName}>
           Back to sign in
         </Link>
       }
@@ -53,29 +55,24 @@ export default function ForgotPasswordPage() {
           <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
             Email
           </span>
-          <input
+          <Input
             type="email"
             required
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
         </label>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Sending…' : 'Request reset token'}
-        </button>
+        </Button>
       </form>
 
       {message ? (
         <p
           role="status"
-          className="mt-4 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900 dark:bg-teal-950 dark:text-teal-100"
+          className="mt-4 rounded-lg bg-accent/15 px-3 py-2 text-sm text-zinc-900 dark:bg-accent/10 dark:text-zinc-100"
         >
           {message}
         </p>
@@ -95,7 +92,7 @@ export default function ForgotPasswordPage() {
           ) : null}
           <Link
             href={`/reset-password?token=${encodeURIComponent(resetToken)}`}
-            className="inline-block font-medium text-teal-800 underline dark:text-teal-300"
+            className={`inline-block underline ${authLinkClassName}`}
           >
             Go to reset password
           </Link>
