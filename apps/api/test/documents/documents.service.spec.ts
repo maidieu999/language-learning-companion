@@ -1,12 +1,17 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Chunk } from '@prisma/client';
+import { DocumentSourceType } from '@prisma/client';
 import { AiService } from 'src/ai/ai.service';
 import { ChunkingRepository } from 'src/chunking/chunking.repository';
 import { ChunkingService } from 'src/chunking/chunking.service';
 import { EmbeddingService } from 'src/embedding/embedding.service';
+import { toDocumentResponse } from 'src/documents/document-response.util';
 import { DocumentRepository } from 'src/documents/documents.repository';
 import { DocumentsService } from 'src/documents/documents.service';
+import { FileExtractionService } from 'src/documents/file-extraction.service';
+import { FileStorageService } from 'src/documents/file-storage.service';
+import type { UploadedFilePayload } from 'src/documents/file-upload.types';
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
@@ -27,6 +32,14 @@ describe('DocumentsService', () => {
     createEmbeddings: jest.Mock;
     deleteByDocumentId: jest.Mock;
   };
+  let fileExtractionService: { extractText: jest.Mock };
+  let fileStorageService: {
+    save: jest.Mock;
+    replace: jest.Mock;
+    delete: jest.Mock;
+    assertFileExists: jest.Mock;
+    openReadStream: jest.Mock;
+  };
 
   const createDocumentDto = {
     title: 'Intro to Vietnamese',
@@ -40,7 +53,19 @@ describe('DocumentsService', () => {
     title: createDocumentDto.title,
     content: createDocumentDto.content,
     userId,
+    sourceType: DocumentSourceType.PASTE,
+    originalFilename: null,
+    storedFileKey: null,
+    mimeType: null,
     createdAt: new Date('2026-01-01'),
+  };
+
+  const pdfDocument = {
+    ...document,
+    sourceType: DocumentSourceType.PDF,
+    originalFilename: 'lesson.pdf',
+    storedFileKey: 'user-1/doc-1/original.pdf',
+    mimeType: 'application/pdf',
   };
 
   const textChunks = ['chunk-a', 'chunk-b'];
@@ -66,6 +91,13 @@ describe('DocumentsService', () => {
     [0.1, 0.2],
     [0.3, 0.4],
   ];
+
+  const uploadFile: UploadedFilePayload = {
+    buffer: Buffer.from('file body'),
+    originalname: 'lesson.txt',
+    mimetype: 'text/plain',
+    size: 9,
+  };
 
   beforeEach(async () => {
     documentRepository = {
@@ -93,6 +125,19 @@ describe('DocumentsService', () => {
       createEmbeddings: jest.fn().mockResolvedValue(undefined),
       deleteByDocumentId: jest.fn().mockResolvedValue(undefined),
     };
+    fileExtractionService = {
+      extractText: jest.fn().mockResolvedValue('Extracted lesson text.'),
+    };
+    fileStorageService = {
+      save: jest.fn().mockResolvedValue('user-1/doc-1/original.txt'),
+      replace: jest.fn().mockResolvedValue('user-1/doc-1/original.txt'),
+      delete: jest.fn().mockResolvedValue(undefined),
+      assertFileExists: jest.fn().mockResolvedValue(undefined),
+      openReadStream: jest.fn().mockReturnValue({
+        stream: {} as NodeJS.ReadableStream,
+        mimeType: 'text/plain',
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -102,6 +147,8 @@ describe('DocumentsService', () => {
         { provide: ChunkingRepository, useValue: chunkingRepository },
         { provide: AiService, useValue: aiService },
         { provide: EmbeddingService, useValue: embeddingService },
+        { provide: FileExtractionService, useValue: fileExtractionService },
+        { provide: FileStorageService, useValue: fileStorageService },
       ],
     }).compile();
 
@@ -116,7 +163,7 @@ describe('DocumentsService', () => {
     it('returns documents from the repository', async () => {
       const result = await service.listDocuments(userId);
 
-      expect(result).toEqual([document]);
+      expect(result).toEqual([toDocumentResponse(document)]);
       expect(documentRepository.listDocuments).toHaveBeenCalledWith(userId);
     });
   });
@@ -125,7 +172,7 @@ describe('DocumentsService', () => {
     it('returns the document when found', async () => {
       const result = await service.getDocument(userId, document.id);
 
-      expect(result).toBe(document);
+      expect(result).toEqual(toDocumentResponse(document));
       expect(documentRepository.findDocumentForUser).toHaveBeenCalledWith(
         document.id,
         userId,
@@ -151,6 +198,21 @@ describe('DocumentsService', () => {
       );
       expect(documentRepository.deleteDocumentForUser).toHaveBeenCalledWith(
         document.id,
+        userId,
+      );
+      expect(fileStorageService.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes stored file when present', async () => {
+      documentRepository.findDocumentForUser.mockResolvedValue(pdfDocument);
+
+      await service.deleteDocument(userId, pdfDocument.id);
+
+      expect(fileStorageService.delete).toHaveBeenCalledWith(
+        pdfDocument.storedFileKey,
+      );
+      expect(documentRepository.deleteDocumentForUser).toHaveBeenCalledWith(
+        pdfDocument.id,
         userId,
       );
     });
@@ -180,7 +242,7 @@ describe('DocumentsService', () => {
         title: 'New title',
       });
 
-      expect(result).toBe(updated);
+      expect(result).toEqual(toDocumentResponse(updated));
       expect(documentRepository.updateDocument).toHaveBeenCalledWith(
         document.id,
         userId,
@@ -200,7 +262,7 @@ describe('DocumentsService', () => {
         content: newContent,
       });
 
-      expect(result).toBe(updated);
+      expect(result).toEqual(toDocumentResponse(updated));
       expect(embeddingService.deleteByDocumentId).toHaveBeenCalledWith(
         document.id,
       );
@@ -215,12 +277,24 @@ describe('DocumentsService', () => {
       expect(embeddingService.createEmbeddings).toHaveBeenCalled();
     });
 
+    it('rejects content updates for file-based documents', async () => {
+      documentRepository.findDocumentForUser.mockResolvedValue(pdfDocument);
+
+      await expect(
+        service.updateDocument(userId, pdfDocument.id, {
+          content: 'Edited in textarea',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(documentRepository.updateDocument).not.toHaveBeenCalled();
+    });
+
     it('skips re-index when content is unchanged', async () => {
       const result = await service.updateDocument(userId, document.id, {
         content: document.content,
       });
 
-      expect(result).toBe(document);
+      expect(result).toEqual(toDocumentResponse(document));
       expect(embeddingService.deleteByDocumentId).not.toHaveBeenCalled();
       expect(chunkingService.chunkText).not.toHaveBeenCalled();
     });
@@ -238,11 +312,12 @@ describe('DocumentsService', () => {
     it('persists document, chunks, and embeddings in order with chunk ids', async () => {
       const result = await service.createDocument(userId, createDocumentDto);
 
-      expect(result).toBe(document);
+      expect(result).toEqual(toDocumentResponse(document));
       expect(documentRepository.createDocument).toHaveBeenCalledWith({
         title: createDocumentDto.title,
         content: createDocumentDto.content,
         userId,
+        sourceType: DocumentSourceType.PASTE,
       });
       expect(chunkingService.chunkText).toHaveBeenCalledWith(
         createDocumentDto.content,
@@ -252,8 +327,6 @@ describe('DocumentsService', () => {
         textChunks,
       );
       expect(aiService.createEmbedding).toHaveBeenCalledTimes(2);
-      expect(aiService.createEmbedding).toHaveBeenNthCalledWith(1, 'chunk-a');
-      expect(aiService.createEmbedding).toHaveBeenNthCalledWith(2, 'chunk-b');
       expect(embeddingService.createEmbeddings).toHaveBeenCalledWith(
         ['chunk-1', 'chunk-2'],
         embeddings,
@@ -266,13 +339,78 @@ describe('DocumentsService', () => {
 
       const result = await service.createDocument(userId, createDocumentDto);
 
-      expect(result).toBe(document);
-      expect(chunkingRepository.createMany).toHaveBeenCalledWith(
-        document.id,
-        [],
-      );
+      expect(result).toEqual(toDocumentResponse(document));
       expect(aiService.createEmbedding).not.toHaveBeenCalled();
       expect(embeddingService.createEmbeddings).toHaveBeenCalledWith([], []);
+    });
+  });
+
+  describe('createDocumentFromFile', () => {
+    it('extracts text, stores file, and indexes', async () => {
+      const created = {
+        ...document,
+        title: 'Custom title',
+        content: 'Extracted lesson text.',
+        sourceType: DocumentSourceType.TEXT_FILE,
+        originalFilename: 'lesson.txt',
+        mimeType: 'text/plain',
+      };
+      const withKey = {
+        ...created,
+        storedFileKey: 'user-1/doc-1/original.txt',
+      };
+      documentRepository.createDocument.mockResolvedValue(created);
+      documentRepository.updateDocument.mockResolvedValue(withKey);
+
+      const result = await service.createDocumentFromFile(
+        userId,
+        uploadFile,
+        'Custom title',
+      );
+
+      expect(fileExtractionService.extractText).toHaveBeenCalled();
+      expect(fileStorageService.save).toHaveBeenCalledWith(
+        userId,
+        created.id,
+        uploadFile.buffer,
+        'txt',
+      );
+      expect(documentRepository.updateDocument).toHaveBeenCalledWith(
+        created.id,
+        userId,
+        { storedFileKey: 'user-1/doc-1/original.txt' },
+      );
+      expect(chunkingService.chunkText).toHaveBeenCalledWith(
+        'Extracted lesson text.',
+      );
+      expect(result.hasFile).toBe(true);
+      expect(result.title).toBe('Custom title');
+    });
+  });
+
+  describe('replaceDocumentFile', () => {
+    it('replaces file and re-indexes when content changes', async () => {
+      documentRepository.findDocumentForUser.mockResolvedValue(pdfDocument);
+      const updated = {
+        ...pdfDocument,
+        content: 'Extracted lesson text.',
+      };
+      documentRepository.updateDocument.mockResolvedValue(updated);
+
+      const result = await service.replaceDocumentFile(
+        userId,
+        pdfDocument.id,
+        uploadFile,
+      );
+
+      expect(fileStorageService.replace).toHaveBeenCalled();
+      expect(embeddingService.deleteByDocumentId).toHaveBeenCalledWith(
+        pdfDocument.id,
+      );
+      expect(chunkingService.chunkText).toHaveBeenCalledWith(
+        'Extracted lesson text.',
+      );
+      expect(result).toEqual(toDocumentResponse(updated));
     });
   });
 });

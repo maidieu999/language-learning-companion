@@ -7,9 +7,15 @@ import {
   Param,
   Patch,
   Post,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -17,9 +23,12 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import type { DocumentModel } from '../database/prisma.types';
+import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/auth.types';
+import type { DocumentResponse } from './document-response.util';
+import { getMaxUploadBytes } from './file-upload.constants';
+import type { UploadedFilePayload } from './file-upload.types';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
@@ -33,8 +42,77 @@ export class DocumentsController {
   @Get()
   @ApiOperation({ summary: 'List documents for the current user' })
   @ApiOkResponse({ description: 'Documents ordered by newest first' })
-  listDocuments(@CurrentUser() user: AuthUser): Promise<DocumentModel[]> {
+  listDocuments(@CurrentUser() user: AuthUser): Promise<DocumentResponse[]> {
     return this.documentsService.listDocuments(user.id);
+  }
+
+  @Post('from-file')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: getMaxUploadBytes() } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Create a document from a PDF or text file' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        title: { type: 'string' },
+      },
+    },
+  })
+  @ApiCreatedResponse({ description: 'Document created from file' })
+  createDocumentFromFile(
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file: UploadedFilePayload,
+    @Body('title') title?: string,
+  ): Promise<DocumentResponse> {
+    return this.documentsService.createDocumentFromFile(user.id, file, title);
+  }
+
+  @Get(':id/file')
+  @ApiOperation({ summary: 'Download the original uploaded file' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  async downloadDocumentFile(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { stream, filename, mimeType } =
+      await this.documentsService.getDocumentFileStream(user.id, id);
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
+    });
+    stream.pipe(res);
+  }
+
+  @Patch(':id/file')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: getMaxUploadBytes() } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Replace a document file and re-index extracted text' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        title: { type: 'string' },
+      },
+    },
+  })
+  @ApiOkResponse({ description: 'Document file replaced' })
+  replaceDocumentFile(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedFilePayload,
+    @Body('title') title?: string,
+  ): Promise<DocumentResponse> {
+    return this.documentsService.replaceDocumentFile(user.id, id, file, title);
   }
 
   @Get(':id')
@@ -44,7 +122,7 @@ export class DocumentsController {
   getDocument(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-  ): Promise<DocumentModel> {
+  ): Promise<DocumentResponse> {
     return this.documentsService.getDocument(user.id, id);
   }
 
@@ -54,7 +132,7 @@ export class DocumentsController {
   createDocument(
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateDocumentDto,
-  ): Promise<DocumentModel> {
+  ): Promise<DocumentResponse> {
     return this.documentsService.createDocument(user.id, dto);
   }
 
@@ -66,7 +144,7 @@ export class DocumentsController {
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() dto: UpdateDocumentDto,
-  ): Promise<DocumentModel> {
+  ): Promise<DocumentResponse> {
     return this.documentsService.updateDocument(user.id, id, dto);
   }
 

@@ -56,9 +56,15 @@ async function sendRequest(
 ): Promise<Response> {
   const token = getAccessToken();
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(init?.headers as Record<string, string> | undefined),
   };
+
+  const isFormData =
+    typeof FormData !== 'undefined' && init?.body instanceof FormData;
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -73,6 +79,15 @@ async function sendRequest(
   }
 
   return response;
+}
+
+async function requestMultipart<T>(
+  path: string,
+  formData: FormData,
+  method: 'POST' | 'PATCH',
+): Promise<T> {
+  const response = await sendRequest(path, { method, body: formData });
+  return response.json() as Promise<T>;
 }
 
 export function register(input: RegisterInput): Promise<AuthResponse> {
@@ -138,6 +153,49 @@ export function updateDocument(
 
 export function deleteDocument(id: string): Promise<void> {
   return requestVoid(`/documents/${id}`, { method: 'DELETE' });
+}
+
+export function createDocumentFromFile(
+  file: File,
+  title?: string,
+): Promise<Document> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (title?.trim()) {
+    formData.append('title', title.trim());
+  }
+  return requestMultipart<Document>('/documents/from-file', formData, 'POST');
+}
+
+export function replaceDocumentFile(
+  id: string,
+  file: File,
+  title?: string,
+): Promise<Document> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (title?.trim()) {
+    formData.append('title', title.trim());
+  }
+  return requestMultipart<Document>(
+    `/documents/${id}/file`,
+    formData,
+    'PATCH',
+  );
+}
+
+export async function downloadDocumentFile(
+  id: string,
+  filename: string,
+): Promise<void> {
+  const response = await sendRequest(`/documents/${id}/file`);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export function search(input: SearchInput): Promise<SearchResult> {

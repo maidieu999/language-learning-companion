@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import type {
   CreateDocumentData,
   DocumentModel,
@@ -45,7 +46,7 @@ export class DocumentRepository extends BaseRepository {
   async updateDocument(
     id: string,
     userId: string,
-    data: { title?: string; content?: string },
+    data: Prisma.DocumentUpdateInput,
   ): Promise<DocumentModel | null> {
     const existing = await this.findDocumentForUser(id, userId);
     if (!existing) {

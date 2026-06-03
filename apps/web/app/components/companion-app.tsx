@@ -4,13 +4,16 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import {
   createDocument,
+  createDocumentFromFile,
   deleteDocument,
+  downloadDocumentFile,
   listDocuments,
+  replaceDocumentFile,
   search,
   updateDocument,
 } from '@/lib/api';
 import { clearAccessToken } from '@/lib/auth';
-import type { Document, SearchResult, User } from '@/lib/types';
+import type { Document, DocumentSourceType, SearchResult, User } from '@/lib/types';
 
 interface CompanionAppProps {
   user: User;
@@ -20,6 +23,7 @@ type IngestStatus = 'idle' | 'loading' | 'success' | 'error';
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
 type ListStatus = 'idle' | 'loading' | 'success' | 'error';
 type EditStatus = 'idle' | 'loading' | 'error';
+type IngestMode = 'paste' | 'file';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -35,6 +39,20 @@ function contentPreview(content: string, maxLength = 160): string {
   return `${content.slice(0, maxLength).trimEnd()}…`;
 }
 
+function sourceTypeLabel(sourceType: DocumentSourceType): string {
+  if (sourceType === 'PDF') {
+    return 'PDF';
+  }
+  if (sourceType === 'TEXT_FILE') {
+    return 'Text file';
+  }
+  return 'Pasted text';
+}
+
+function isFileDocument(doc: Document): boolean {
+  return doc.sourceType === 'PDF' || doc.sourceType === 'TEXT_FILE';
+}
+
 export function CompanionApp({ user }: CompanionAppProps) {
   const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -44,6 +62,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
+  const [editReplaceFile, setEditReplaceFile] = useState<File | null>(null);
   const [editStatus, setEditStatus] = useState<EditStatus>('idle');
   const [editError, setEditError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -51,6 +70,8 @@ export function CompanionApp({ user }: CompanionAppProps) {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [ingestMode, setIngestMode] = useState<IngestMode>('paste');
+  const [ingestFile, setIngestFile] = useState<File | null>(null);
   const [ingestStatus, setIngestStatus] = useState<IngestStatus>('idle');
   const [ingestError, setIngestError] = useState<string | null>(null);
   const [ingestMessage, setIngestMessage] = useState<string | null>(null);
@@ -89,9 +110,21 @@ export function CompanionApp({ user }: CompanionAppProps) {
     setIngestMessage(null);
 
     try {
-      const document = await createDocument({ title: title.trim(), content });
+      const document =
+        ingestMode === 'file'
+          ? await (() => {
+              if (!ingestFile) {
+                throw new Error('Choose a PDF or text file to upload');
+              }
+              return createDocumentFromFile(
+                ingestFile,
+                title.trim() || undefined,
+              );
+            })()
+          : await createDocument({ title: title.trim(), content });
       setTitle('');
       setContent('');
+      setIngestFile(null);
       setIngestStatus('success');
       setIngestMessage(`Saved "${document.title}". You can ask questions about it now.`);
       await loadDocuments();
@@ -105,6 +138,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
     setEditingId(doc.id);
     setEditTitle(doc.title);
     setEditContent(doc.content);
+    setEditReplaceFile(null);
     setEditStatus('idle');
     setEditError(null);
     setExpandedId(doc.id);
@@ -114,20 +148,37 @@ export function CompanionApp({ user }: CompanionAppProps) {
     setEditingId(null);
     setEditTitle('');
     setEditContent('');
+    setEditReplaceFile(null);
     setEditStatus('idle');
     setEditError(null);
   }
 
-  async function handleSaveEdit(event: FormEvent, docId: string) {
+  async function handleSaveEdit(event: FormEvent, doc: Document) {
     event.preventDefault();
     setEditStatus('loading');
     setEditError(null);
 
     try {
-      await updateDocument(docId, {
-        title: editTitle.trim(),
-        content: editContent,
-      });
+      if (isFileDocument(doc)) {
+        if (!editReplaceFile) {
+          if (editTitle.trim() !== doc.title) {
+            await updateDocument(doc.id, { title: editTitle.trim() });
+          } else {
+            throw new Error('Choose a replacement PDF or text file');
+          }
+        } else {
+          await replaceDocumentFile(
+            doc.id,
+            editReplaceFile,
+            editTitle.trim() || undefined,
+          );
+        }
+      } else {
+        await updateDocument(doc.id, {
+          title: editTitle.trim(),
+          content: editContent,
+        });
+      }
       cancelEditing();
       await loadDocuments();
     } catch (error) {
@@ -304,6 +355,11 @@ export function CompanionApp({ user }: CompanionAppProps) {
                       </span>
                       <span className="text-xs text-zinc-500 dark:text-zinc-400">
                         {formatDate(doc.createdAt)}
+                        {' · '}
+                        {sourceTypeLabel(doc.sourceType)}
+                        {doc.originalFilename
+                          ? ` · ${doc.originalFilename}`
+                          : null}
                       </span>
                       {!expanded && !editing ? (
                         <span className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -332,7 +388,7 @@ export function CompanionApp({ user }: CompanionAppProps) {
                   </div>
                   {editing ? (
                     <form
-                      onSubmit={(e) => void handleSaveEdit(e, doc.id)}
+                      onSubmit={(e) => void handleSaveEdit(e, doc)}
                       className="space-y-4 border-t border-zinc-200 px-4 py-3 dark:border-zinc-800"
                     >
                       <label className="block space-y-1.5">
@@ -347,18 +403,64 @@ export function CompanionApp({ user }: CompanionAppProps) {
                           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
                         />
                       </label>
-                      <label className="block space-y-1.5">
-                        <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                          Content
-                        </span>
-                        <textarea
-                          required
-                          rows={6}
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-                        />
-                      </label>
+                      {isFileDocument(doc) ? (
+                        <>
+                          {doc.hasFile ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void downloadDocumentFile(
+                                    doc.id,
+                                    doc.originalFilename ?? 'download',
+                                  ).catch((error) => {
+                                    setEditError(
+                                      error instanceof Error
+                                        ? error.message
+                                        : 'Download failed',
+                                    );
+                                  })
+                                }
+                                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                              >
+                                Download original
+                              </button>
+                              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                                {doc.originalFilename}
+                              </span>
+                            </div>
+                          ) : null}
+                          <label className="block space-y-1.5">
+                            <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                              Replace file
+                            </span>
+                            <input
+                              type="file"
+                              accept=".pdf,.txt,application/pdf,text/plain"
+                              onChange={(e) =>
+                                setEditReplaceFile(e.target.files?.[0] ?? null)
+                              }
+                              className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white dark:text-zinc-300"
+                            />
+                          </label>
+                          <p className="whitespace-pre-wrap rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
+                            {contentPreview(doc.content, 400)}
+                          </p>
+                        </>
+                      ) : (
+                        <label className="block space-y-1.5">
+                          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                            Content
+                          </span>
+                          <textarea
+                            required
+                            rows={6}
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                          />
+                        </label>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="submit"
@@ -413,44 +515,95 @@ export function CompanionApp({ user }: CompanionAppProps) {
           Add material
         </h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Paste vocabulary, grammar notes, or short reading passages.
+          Paste lesson text or upload a PDF or plain text file.
         </p>
 
         <form onSubmit={handleIngest} className="mt-5 space-y-4">
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              How to add
+            </legend>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="ingest-mode"
+                  checked={ingestMode === 'paste'}
+                  onChange={() => setIngestMode('paste')}
+                />
+                Paste text
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="ingest-mode"
+                  checked={ingestMode === 'file'}
+                  onChange={() => setIngestMode('file')}
+                />
+                Upload file
+              </label>
+            </div>
+          </fieldset>
+
           <label className="block space-y-1.5">
             <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              Title
+              Title{ingestMode === 'file' ? ' (optional)' : ''}
             </span>
             <input
               type="text"
-              required
+              required={ingestMode === 'paste'}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Vietnamese greetings — lesson 1"
+              placeholder={
+                ingestMode === 'file'
+                  ? 'Defaults to the file name'
+                  : 'Vietnamese greetings — lesson 1'
+              }
               className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
             />
           </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              Content
-            </span>
-            <textarea
-              required
-              rows={8}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Xin chào is the most common way to say hello in Vietnamese..."
-              className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-            />
-          </label>
+          {ingestMode === 'paste' ? (
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                Content
+              </span>
+              <textarea
+                required
+                rows={8}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Xin chào is the most common way to say hello in Vietnamese..."
+                className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm leading-relaxed text-zinc-900 outline-none ring-teal-600/30 focus:border-teal-600 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              />
+            </label>
+          ) : (
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                File
+              </span>
+              <input
+                type="file"
+                required
+                accept=".pdf,.txt,application/pdf,text/plain"
+                onChange={(e) => setIngestFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white dark:text-zinc-300"
+              />
+            </label>
+          )}
 
           <button
             type="submit"
             disabled={ingestStatus === 'loading'}
             className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {ingestStatus === 'loading' ? 'Saving and embedding…' : 'Save material'}
+            {ingestStatus === 'loading'
+              ? ingestMode === 'file'
+                ? 'Uploading and embedding…'
+                : 'Saving and embedding…'
+              : ingestMode === 'file'
+                ? 'Upload material'
+                : 'Save material'}
           </button>
         </form>
 
