@@ -8,6 +8,7 @@ import { DocumentRepository } from './documents.repository';
 import { DocumentsService } from './documents.service';
 import { FileExtractionService } from './file-extraction.service';
 import { FileStorageService } from './file-storage.service';
+import { MarkItDownClient } from './markitdown.client';
 
 @Module({
   imports: [PrismaModule, ChunkingModule, EmbeddingModule, AiModule],
@@ -15,6 +16,7 @@ import { FileStorageService } from './file-storage.service';
   providers: [
     DocumentRepository,
     DocumentsService,
+    MarkItDownClient,
     FileExtractionService,
     FileStorageService,
   ],

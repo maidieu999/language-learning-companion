@@ -54,8 +54,22 @@ export function parseUploadedFile(
     };
   }
 
+  if (
+    ext === 'docx' ||
+    mime ===
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
+    return {
+      sourceType: DocumentSourceType.DOCX,
+      mimeType:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      extension: 'docx',
+      originalFilename,
+    };
+  }
+
   throw new BadRequestException(
-    'Only PDF (.pdf) and plain text (.txt) files are supported',
+    'Only PDF (.pdf), Word (.docx), and plain text (.txt) files are supported',
   );
 }
 

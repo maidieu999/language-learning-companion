@@ -1,19 +1,32 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DocumentSourceType } from '@prisma/client';
-import { PDFParse } from 'pdf-parse';
+import { MarkItDownClient } from './markitdown.client';
+
+const MARKITDOWN_SOURCE_TYPES = new Set<DocumentSourceType>([
+  DocumentSourceType.PDF,
+  DocumentSourceType.DOCX,
+]);
 
 @Injectable()
 export class FileExtractionService {
+  constructor(private readonly markItDownClient: MarkItDownClient) {}
+
   async extractText(
     buffer: Buffer,
     sourceType: DocumentSourceType,
+    originalFilename: string,
+    mimeType: string,
   ): Promise<string> {
     let text: string;
 
     if (sourceType === DocumentSourceType.TEXT_FILE) {
       text = buffer.toString('utf8');
-    } else if (sourceType === DocumentSourceType.PDF) {
-      text = await this.extractPdfText(buffer);
+    } else if (MARKITDOWN_SOURCE_TYPES.has(sourceType)) {
+      text = await this.markItDownClient.convertToMarkdown(
+        buffer,
+        originalFilename,
+        mimeType,
+      );
     } else {
       throw new BadRequestException('Unsupported file type for extraction');
     }
@@ -24,15 +37,5 @@ export class FileExtractionService {
     }
 
     return trimmed;
-  }
-
-  private async extractPdfText(buffer: Buffer): Promise<string> {
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const result = await parser.getText();
-      return result.text;
-    } finally {
-      await parser.destroy();
-    }
   }
 }

@@ -29,6 +29,14 @@ services:
       - localstack_data:/var/lib/localstack
       - ./docker/localstack/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh
 
+  markitdown:
+    build: ./services/markitdown
+    container_name: llc-markitdown
+    ports:
+      - "8000:8000"
+    environment:
+      MAX_UPLOAD_BYTES: "20971520"
+
 volumes:
   postgres_data:
   localstack_data:

@@ -18,7 +18,10 @@ import {
 } from '@nestjs/common';
 import * as path from 'path';
 import { PassThrough, type Readable } from 'stream';
-import type { DocumentFileStream } from './file-upload.types';
+import type {
+  DocumentFileStream,
+  StoredFileExtension,
+} from './file-upload.types';
 import { getS3Bucket } from './file-upload.constants';
 import {
   buildStoredFileKey,
@@ -53,7 +56,7 @@ export class FileStorageService implements OnModuleInit {
   buildStoredFileKey(
     userId: string,
     documentId: string,
-    extension: 'pdf' | 'txt',
+    extension: StoredFileExtension,
   ): string {
     return buildStoredFileKey(userId, documentId, extension);
   }
@@ -62,7 +65,7 @@ export class FileStorageService implements OnModuleInit {
     userId: string,
     documentId: string,
     buffer: Buffer,
-    extension: 'pdf' | 'txt',
+    extension: StoredFileExtension,
   ): Promise<string> {
     const key = buildStoredFileKey(userId, documentId, extension);
     await this.putObject(key, buffer);
@@ -73,7 +76,7 @@ export class FileStorageService implements OnModuleInit {
     userId: string,
     documentId: string,
     buffer: Buffer,
-    extension: 'pdf' | 'txt',
+    extension: StoredFileExtension,
     previousKey: string | null,
   ): Promise<string> {
     const key = buildStoredFileKey(userId, documentId, extension);

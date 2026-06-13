@@ -65,6 +65,8 @@ export class DocumentsService {
     const content = await this.fileExtractionService.extractText(
       file.buffer,
       parsed.sourceType,
+      parsed.originalFilename,
+      parsed.mimeType,
     );
     const resolvedTitle =
       title?.trim() || titleFromFilename(parsed.originalFilename);
@@ -107,6 +109,8 @@ export class DocumentsService {
     const content = await this.fileExtractionService.extractText(
       file.buffer,
       parsed.sourceType,
+      parsed.originalFilename,
+      parsed.mimeType,
     );
 
     const storedFileKey = await this.fileStorageService.replace(

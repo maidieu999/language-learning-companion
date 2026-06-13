@@ -32,6 +32,18 @@ describe('file-validation.util', () => {
     expect(parsed.extension).toBe('pdf');
   });
 
+  it('parses docx files', () => {
+    const parsed = parseUploadedFile({
+      ...baseFile,
+      originalname: 'lesson.docx',
+      mimetype:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+
+    expect(parsed.sourceType).toBe(DocumentSourceType.DOCX);
+    expect(parsed.extension).toBe('docx');
+  });
+
   it('rejects unsupported types', () => {
     expect(() =>
       parseUploadedFile({

@@ -7,10 +7,12 @@ export interface UploadedFilePayload {
   size: number;
 }
 
+export type StoredFileExtension = 'pdf' | 'txt' | 'docx';
+
 export interface ParsedUploadFile {
   sourceType: DocumentSourceType;
   mimeType: string;
-  extension: 'pdf' | 'txt';
+  extension: StoredFileExtension;
   originalFilename: string;
 }
 

@@ -22,5 +22,12 @@ describe('file-storage-key.util', () => {
   it('maps content types from key extension', () => {
     expect(contentTypeForKey('u/d/original.pdf')).toBe('application/pdf');
     expect(contentTypeForKey('u/d/original.txt')).toBe('text/plain');
+    expect(contentTypeForKey('u/d/original.docx')).toBe(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+  });
+
+  it('accepts docx keys as safe', () => {
+    expect(isKeySafe('user-1/doc-1/original.docx')).toBe(true);
   });
 });

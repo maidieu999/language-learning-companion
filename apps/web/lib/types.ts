@@ -44,7 +44,7 @@ export interface ResetPasswordInput {
   newPassword: string;
 }
 
-export type DocumentSourceType = 'PASTE' | 'PDF' | 'TEXT_FILE';
+export type DocumentSourceType = 'PASTE' | 'PDF' | 'TEXT_FILE' | 'DOCX';
 
 export interface Document {
   id: string;

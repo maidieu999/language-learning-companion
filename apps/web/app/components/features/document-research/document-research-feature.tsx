@@ -42,11 +42,18 @@ function sourceTypeLabel(sourceType: DocumentSourceType): string {
   if (sourceType === 'TEXT_FILE') {
     return 'Text file';
   }
+  if (sourceType === 'DOCX') {
+    return 'Word document';
+  }
   return 'Pasted text';
 }
 
 function isFileDocument(doc: Document): boolean {
-  return doc.sourceType === 'PDF' || doc.sourceType === 'TEXT_FILE';
+  return (
+    doc.sourceType === 'PDF' ||
+    doc.sourceType === 'TEXT_FILE' ||
+    doc.sourceType === 'DOCX'
+  );
 }
 
 export function DocumentResearchFeature() {
@@ -400,7 +407,7 @@ export function DocumentResearchFeature() {
                             </span>
                             <input
                               type="file"
-                              accept=".pdf,.txt,application/pdf,text/plain"
+                              accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                               onChange={(e) =>
                                 setEditReplaceFile(e.target.files?.[0] ?? null)
                               }
@@ -546,7 +553,7 @@ export function DocumentResearchFeature() {
               <input
                 type="file"
                 required
-                accept=".pdf,.txt,application/pdf,text/plain"
+                accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                 onChange={(e) => setIngestFile(e.target.files?.[0] ?? null)}
                 className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-2 file:text-sm file:font-medium file:text-white dark:text-zinc-300"
               />

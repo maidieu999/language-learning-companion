@@ -51,7 +51,7 @@ export class DocumentsController {
     FileInterceptor('file', { limits: { fileSize: getMaxUploadBytes() } }),
   )
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Create a document from a PDF or text file' })
+  @ApiOperation({ summary: 'Create a document from a PDF, Word, or text file' })
   @ApiBody({
     schema: {
       type: 'object',
